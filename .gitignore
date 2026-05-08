@@ -1,0 +1,14 @@
+.venv/
+.env
+*.duckdb
+*.duckdb.wal
+data/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+jupyter.log
+jupyter.pid
+deploy.log
+.DS_Store
+.protonpass/
+pass-cli-session*
