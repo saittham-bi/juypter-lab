@@ -119,8 +119,28 @@ fi
 # =============================================================================
 log "--- Proton Pass CLI ---"
 chmod +x "$WORKDIR/scripts/protonpass.sh"
-source "$WORKDIR/scripts/protonpass.sh"
-pass_install && log "Proton Pass bereit" || log "Proton Pass Installation fehlgeschlagen"
+
+# Stelle sicher, dass npm installiert ist
+if ! command -v npm >/dev/null 2>&1; then
+  log "npm nicht gefunden – installiere Node.js/npm ..."
+  # Für Virtuozzo Python-Node könnte Node.js verfügbar sein, sonst manuell
+  if command -v apt-get >/dev/null 2>&1; then
+    apt-get update && apt-get install -y nodejs npm
+  elif command -v yum >/dev/null 2>&1; then
+    yum install -y nodejs npm
+  else
+    log "WARNUNG: npm konnte nicht installiert werden – Proton Pass CLI manuell installieren"
+  fi
+fi
+
+# Installiere Proton Pass CLI via npm als Alternative
+if command -v npm >/dev/null 2>&1; then
+  log "Installiere Proton Pass CLI via npm ..."
+  npm install -g @proton/cli && log "Proton Pass CLI via npm installiert"
+else
+  source "$WORKDIR/scripts/protonpass.sh"
+  pass_install && log "Proton Pass bereit" || log "Proton Pass Installation fehlgeschlagen"
+fi
 
 if [ -t 0 ]; then
   pass_login && log "Proton Pass eingeloggt" || log "Login fehlgeschlagen"

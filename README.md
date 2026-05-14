@@ -1,6 +1,6 @@
 # JupyterLab PaaS
 
-JupyterLab auf Virtuozzo PaaS – **ohne Nginx**, direkt via Apache Reverse-Proxy.
+JupyterLab auf Virtuozzo PaaS
 
 ## Architektur
 
