@@ -207,3 +207,5 @@ else
   log "WARNUNG: JupyterLab antwortet noch nicht"
   log "  Log prüfen: tail -f $WORKDIR/jupyter.log"
 fi
+
+@reboot bash /var/www/webroot/ROOT/startup.sh >> startup.log 2>&1

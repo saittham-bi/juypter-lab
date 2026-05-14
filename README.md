@@ -1,6 +1,6 @@
 # JupyterLab PaaS
 
-JupyterLab auf Virtuozzo PaaS
+JupyterLab auf Virtuozzo PaaS – **ohne Nginx**, direkt via Apache Reverse-Proxy.
 
 ## Architektur
 
@@ -107,3 +107,49 @@ service httpd restart
 # Token generieren
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
+
+---
+
+## Auto-Start nach Node-Neustart
+
+`deploy.sh` registriert `startup.sh` automatisch als `@reboot` Cron-Job.
+Bei jedem Node-Neustart läuft folgende Sequenz automatisch ab:
+
+```
+Node startet
+    │
+    ▼
+@reboot Cron → startup.sh
+    │
+    ├── Apache-Konfig prüfen / wiederherstellen
+    ├── Apache starten
+    └── JupyterLab starten (nohup)
+```
+
+### Cron-Job manuell prüfen
+
+```bash
+crontab -l
+# Sollte enthalten:
+# @reboot bash /var/www/webroot/ROOT/startup.sh >> /var/www/webroot/ROOT/startup.log 2>&1
+```
+
+### startup.sh manuell ausführen
+
+```bash
+bash /var/www/webroot/ROOT/startup.sh
+
+# Log beobachten
+tail -f /var/www/webroot/ROOT/startup.log
+```
+
+### Ablauf deploy.sh vs. startup.sh
+
+| | `deploy.sh` | `startup.sh` |
+|---|---|---|
+| **Wann** | Einmalig nach Git-Deploy | Bei jedem Node-Neustart |
+| **Virtualenv** | Erstellt + alle Pakete installiert | Nur geprüft ob vorhanden |
+| **Apache** | Konfig installiert + Neustart | Konfig wiederhergestellt + Neustart |
+| **JupyterLab** | Gestartet | Gestartet |
+| **Proton Pass** | CLI installiert + Login | Logout-Trap eingebunden |
+| **Cron-Job** | Registriert | – |
