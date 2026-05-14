@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # startup.sh – Startet JupyterLab nach einem Node-Neustart
-# Wird als Virtuozzo Post-Start Hook ausgeführt
-# Setzt voraus: deploy.sh wurde einmalig ausgeführt
+# Wichtig: Apache wird auf Virtuozzo automatisch gestartet – nur neu laden!
 # =============================================================================
 set -euo pipefail
 
@@ -32,8 +31,7 @@ fi
 
 if [ -z "${JUPYTER_TOKEN:-}" ]; then
   log "FEHLER: JUPYTER_TOKEN nicht gesetzt!"
-  log "  In Virtuozzo Umgebungsvariablen definieren:"
-  log "  python3 -c \"import secrets; print(secrets.token_hex(32))\""
+  log "  In Virtuozzo Umgebungsvariablen definieren."
   exit 1
 fi
 
@@ -41,7 +39,8 @@ log "Voraussetzungen OK"
 
 # =============================================================================
 # Apache Proxy-Konfiguration sicherstellen
-# (geht bei Node-Neustart verloren wenn /etc nicht persistent ist)
+# Auf Virtuozzo startet Apache automatisch – wir laden nur neu (graceful reload)
+# KEIN restart/start – das würde den Permission-Fehler auf Port 80 auslösen!
 # =============================================================================
 APACHE_CONF_DIR=""
 for d in /etc/apache2/conf.d /etc/httpd/conf.d /etc/apache2/sites-enabled; do
@@ -52,24 +51,33 @@ for d in /etc/apache2/conf.d /etc/httpd/conf.d /etc/apache2/sites-enabled; do
 done
 
 if [ -n "$APACHE_CONF_DIR" ]; then
+
+  # Konfig wiederherstellen falls sie fehlt (z.B. nach Redeploy)
   if [ ! -f "$APACHE_CONF_DIR/jupyterlab.conf" ]; then
-    log "Apache-Konfig fehlt (Node-Neustart?) – stelle wieder her ..."
+    log "Apache-Konfig fehlt – stelle wieder her ..."
     cp "$WORKDIR/.virtuozzo/apache.conf" "$APACHE_CONF_DIR/jupyterlab.conf"
     log "Apache-Konfig wiederhergestellt"
   else
     log "Apache-Konfig vorhanden"
   fi
 
-  # Apache neu starten
+  # Nur neu laden (reload/graceful) – Apache läuft bereits, kein Start nötig
+  # graceful: bestehende Verbindungen bleiben, neue Konfig wird aktiviert
+  log "Apache Konfig neu laden ..."
   if command -v apachectl >/dev/null 2>&1; then
-    apachectl configtest 2>/dev/null && apachectl graceful \
-      && log "Apache gestartet (apachectl)" \
-      || log "WARNUNG: Apache-Start fehlgeschlagen"
-  elif service apache2 status >/dev/null 2>&1 || true; then
-    service apache2 restart && log "Apache gestartet (apache2)" || true
-  elif service httpd status >/dev/null 2>&1 || true; then
-    service httpd restart && log "Apache gestartet (httpd)" || true
+    apachectl configtest 2>/dev/null \
+      && apachectl graceful \
+      && log "Apache neu geladen (apachectl graceful)" \
+      || log "WARNUNG: Apache graceful reload fehlgeschlagen – Konfig prüfen"
+  elif command -v httpd >/dev/null 2>&1; then
+    httpd -t 2>/dev/null \
+      && kill -USR1 "$(cat /var/run/httpd/httpd.pid 2>/dev/null || echo 0)" 2>/dev/null \
+      && log "Apache neu geladen (USR1 signal)" \
+      || log "WARNUNG: Apache reload via signal fehlgeschlagen"
+  else
+    log "WARNUNG: apachectl nicht gefunden – Apache-Reload übersprungen"
   fi
+
 else
   log "WARNUNG: Apache-Konfig-Verzeichnis nicht gefunden"
 fi
@@ -98,7 +106,15 @@ source "$VENV_DIR/bin/activate"
 
 # Proton Pass Logout-Trap einbinden falls CLI vorhanden
 PROTONPASS_HOOK=""
-if [ -f "$WORKDIR/scripts/protonpass.sh" ] && command -v pass-cli >/dev/null 2>&1; then
+# PATH für pass-cli sicherstellen
+export PATH="$HOME/.local/bin:$PATH"
+export PROTON_PASS_KEY_PROVIDER=fs
+
+if [ -f "$WORKDIR/scripts/protonpass.sh" ]; then
+  source "$WORKDIR/scripts/protonpass.sh"
+fi
+
+if command -v pass-cli >/dev/null 2>&1; then
   PROTONPASS_HOOK="source $WORKDIR/scripts/protonpass.sh; trap pass_logout EXIT INT TERM"
   log "Proton Pass Logout-Trap aktiv"
 fi
@@ -109,7 +125,7 @@ ${PROTONPASS_HOOK}
 
 source "${VENV_DIR}/bin/activate"
 
-exec jupyter lab \\
+exec jupyter lab \
   --config="${WORKDIR}/jupyter_lab_config.py"
 RUNSCRIPT
 chmod +x "$WORKDIR/scripts/run_jupyter.sh"
