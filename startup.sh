@@ -64,6 +64,8 @@ fi
 # Proton Pass PATH sicherstellen
 export PATH="$HOME/.local/bin:$PATH"
 export PROTON_PASS_KEY_PROVIDER=fs
+export MISTRAL_API_KEY="${MISTRAL_API_KEY:-${JELASTIC_MISTRAL_API_KEY:-${MISTRALAI_API_KEY:-}}}"
+export MISTRAL_MODEL="${MISTRAL_MODEL:-mistral-small-latest}"
 
 # Alte Instanz beenden
 if [ -f "$WORKDIR/jupyter.pid" ]; then
@@ -88,6 +90,9 @@ _stop() {
   pass_logout
 }
 trap _stop EXIT INT TERM
+
+export MISTRAL_API_KEY="${MISTRAL_API_KEY:-${JELASTIC_MISTRAL_API_KEY:-${MISTRALAI_API_KEY:-}}}"
+export MISTRAL_MODEL="${MISTRAL_MODEL:-mistral-small-latest}"
 
 source "${VENV_DIR}/bin/activate"
 exec jupyter lab --config="${WORKDIR}/jupyter_lab_config.py"

@@ -53,8 +53,10 @@ Node → Zahnrad → **Variables**:
 |----------|------|
 | `JUPYTER_TOKEN` | `python3 -c "import secrets; print(secrets.token_hex(32))"` |
 | `JUPYTER_PORT` | `8888` |
-| `INFOMANIAK_API_KEY` | dein Infomaniak Token |
-| `INFOMANIAK_PRODUCT_ID` | deine Product-ID |
+| `MISTRAL_API_KEY` | dein Mistral API-Key (z. B. aus Jelastic Variables) |
+| `MISTRAL_MODEL` | optional, z. B. `mistral-small-latest` |
+| `INFOMANIAK_API_KEY` | dein Infomaniak Token (optional) |
+| `INFOMANIAK_PRODUCT_ID` | deine Product-ID (optional) |
 
 ### 3. Git deployen
 
@@ -78,13 +80,21 @@ Das Skript:
 - Startet JupyterLab als Hintergrundprozess
 - Richtet Proton Pass Logout-Trap ein
 
-### 5. Proton Pass einloggen
+### 5. Mistral in JupyterLab verwenden
+
+Wenn du Jupyter AI in JupyterLab nutzen möchtest, setze den Mistral API-Key als Umgebungsvariable im Jelastic Dashboard, z. B. unter `MISTRAL_API_KEY`.
+
+Optional kannst du zusätzlich `MISTRAL_MODEL` definieren, zum Beispiel `mistral-small-latest`.
+
+Danach kannst du in JupyterLab z. B. mit dem Jupyter AI Magic oder dem Chat-Panel direkt Mistral-Modelle nutzen.
+
+### 6. Proton Pass einloggen
 
 ```bash
 pass-cli login
 ```
 
-### 6. JupyterLab aufrufen
+### 7. JupyterLab aufrufen
 
 ```
 https://your-env.paas.infomaniak.com/?token=DEIN_JUPYTER_TOKEN

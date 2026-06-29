@@ -55,7 +55,19 @@ source "$VENV_DIR/bin/activate"
 log "Virtualenv aktiv ($(pip --version))"
 
 # =============================================================================
-# 3. Pakete installieren
+# 3. Umgebungsvariablen für Jupyter AI / Mistral
+# =============================================================================
+export MISTRAL_API_KEY="${MISTRAL_API_KEY:-${JELASTIC_MISTRAL_API_KEY:-${MISTRALAI_API_KEY:-}}}"
+export MISTRAL_MODEL="${MISTRAL_MODEL:-mistral-small-latest}"
+
+if [ -n "${MISTRAL_API_KEY:-}" ]; then
+  log "Mistral AI: API key aus MISTRAL_API_KEY/JELASTIC_MISTRAL_API_KEY übernommen"
+else
+  log "Mistral AI: kein API key gesetzt – Jupyter AI Mistral bleibt deaktiviert"
+fi
+
+# =============================================================================
+# 4. Pakete installieren
 # =============================================================================
 pip install --upgrade pip wheel setuptools --quiet
 pip install -r "$WORKDIR/requirements.txt" --quiet
@@ -168,6 +180,9 @@ _stop() {
   pass_logout
 }
 trap _stop EXIT INT TERM
+
+export MISTRAL_API_KEY="${MISTRAL_API_KEY:-${JELASTIC_MISTRAL_API_KEY:-${MISTRALAI_API_KEY:-}}}"
+export MISTRAL_MODEL="${MISTRAL_MODEL:-mistral-small-latest}"
 
 source "${VENV_DIR}/bin/activate"
 
